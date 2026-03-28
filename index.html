@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Касса | Игруш Банк</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Основной контейнер кассы */
+        .pos-container {
+            max-width: 550px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        /* Шапка с брендингом */
+        .bank-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px 24px;
+            color: white;
+        }
+
+        .bank-header h1 {
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bank-header p {
+            opacity: 0.85;
+            font-size: 0.9rem;
+            margin-top: 6px;
+        }
+
+        /* Секция добавления нового товара */
+        .add-product-panel {
+            background: #f8fafc;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .add-product-panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: #0f172a;
+        }
+
+        .product-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .product-form input {
+            flex: 1;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 24px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .product-form input:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 0 2px rgba(42,82,152,0.2);
+        }
+
+        .product-form button {
+            background: #2a5298;
+            border: none;
+            color: white;
+            padding: 0 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .product-form button:hover {
+            background: #1e3c72;
+            transform: scale(0.97);
+        }
+
+        /* Список доступных товаров (каталог) */
+        .products-catalog {
+            padding: 20px 24px 12px 24px;
+            border-bottom: 1px solid #e9eef3;
+        }
+
+        .catalog-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+
+        .catalog-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .catalog-item {
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .catalog-item:hover {
+            background: #e6edf8;
+            transform: translateY(-1px);
+        }
+
+        .item-name {
+            font-weight: 500;
+        }
+
+        .item-price {
+            color: #2a5298;
+            font-weight: bold;
+        }
+
+        .add-badge {
+            background: white;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        /* Текущий заказ */
+        .current-order {
+            padding: 12px 24px;
+            background: white;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .order-items {
+            max-height: 280px;
+            overflow-y: auto;
+            border-radius: 20px;
+            background: #fafcff;
+            margin-bottom: 16px;
+        }
+
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 8px;
+            border-bottom: 1px solid #ecf3fa;
+        }
+
+        .order-row span:first-child {
+            font-weight: 500;
+        }
+
+        .total-area {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.5rem;
+            font-weight: 800;
+            padding: 16px 0;
+            border-top: 2px dashed #cbd5e1;
+            margin-top: 8px;
+        }
+
+        .pay-button {
+            width: 100%;
+            background: linear-gradient(95deg, #2a5298, #1e3c72);
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 48px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+        }
+
+        .pay-button:hover {
+            transform: scale(0.98);
+            background: linear-gradient(95deg, #1e3c72, #0f2a4f);
+        }
+
+        /* Модальное окно оплаты (QR + сумма) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: white;
+            max-width: 400px;
+            width: 90%;
+            border-radius: 40px;
+            padding: 28px 24px;
+            text-align: center;
+            box-shadow: 0 30px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-card h2 {
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+
+        .qr-code {
+            background: white;
+            padding: 16px;
+            margin: 20px 0;
+            display: inline-block;
+            border-radius: 28px;
+        }
+
+        .amount-rub {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 12px 0;
+        }
+
+        .close-modal {
+            background: #eef2ff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 60px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        .success-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #16a34a;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 60px;
+            font-weight: bold;
+            z-index: 1100;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .small-note {
+            font-size: 0.7rem;
+            color: #475569;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="pos-container">
+    <div class="bank-header">
+        <h1>🧸 Игруш Банк</h1>
+        <p>Касса быстрого обслуживания</p>
+    </div>
+
+    <!-- Панель добавления товара прямо в кассе -->
+    <div class="add-product-panel">
+        <h3>➕ Добавить товар в каталог</h3>
+        <div class="product-form">
+            <input type="text" id="newProductName" placeholder="Наименование, например: Мишка" autocomplete="off">
+            <input type="number" id="newProductPrice" placeholder="Цена, руб" step="1" min="0">
+            <button id="addProductBtn">Добавить</button>
+        </div>
+    </div>
+
+    <!-- Список доступных товаров (динамически) -->
+    <div class="products-catalog">
+        <div class="catalog-title">📦 Товары для заказа (нажми чтобы добавить)</div>
+        <div id="catalogList" class="catalog-grid">
+            <!-- Товары загрузятся из Firebase -->
+            <div style="color:gray;">Загрузка товаров...</div>
+        </div>
+    </div>
+
+    <!-- Текущий заказ -->
+    <div class="current-order">
+        <div class="order-header">
+            <span>🧾 Текущий заказ</span>
+            <button id="clearOrderBtn" style="background:none; border:none; color:#dc2626; cursor:pointer;">Очистить</button>
+        </div>
+        <div id="orderItemsList" class="order-items">
+            <div style="text-align:center; color:#94a3b8;">Корзина пуста</div>
+        </div>
+        <div class="total-area">
+            <span>ИТОГО:</span>
+            <span id="totalAmountRub">0 ₽</span>
+        </div>
+        <button id="proceedToPayBtn" class="pay-button">💳 ОПЛАТА</button>
+    </div>
+</div>
+
+<!-- Модальное окно: QR-код и информация об оплате -->
+<div id="paymentModal" class="modal">
+    <div class="modal-card">
+        <h2>🧸 Игруш Банк</h2>
+        <p>Сканируйте QR для оплаты</p>
+        <div id="qrCodeContainer" class="qr-code">
+            <!-- здесь будет QR код как canvas -->
+        </div>
+        <div class="amount-rub" id="modalAmount">0 ₽</div>
+        <div id="orderIdDisplay" style="font-size:12px; color:#4b5563;">Заказ №: --</div>
+        <button class="close-modal" onclick="closePaymentModal()">Закрыть</button>
+        <div class="small-note">После оплаты статус обновится автоматически</div>
+    </div>
+</div>
+
+<div id="successToast" class="success-toast">✅ Оплата успешно принята!</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    // Инициализация Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBTBhRE8jKBOQ03CpbmOMy7mW91GXaBx7c",
+        authDomain: "world-call-4662e.firebaseapp.com",
+        databaseURL: "https://world-call-4662e-default-rtdb.firebaseio.com",
+        projectId: "world-call-4662e",
+        storageBucket: "world-call-4662e.firebasestorage.app",
+        messagingSenderId: "917512119108",
+        appId: "1:917512119108:web:6000efc5c94d863765ad11",
+        measurementId: "G-G7N72R1P9E"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Ссылки на узлы
+    const productsRef = database.ref('products');     // список товаров { name, price }
+    const ordersRef = database.ref('orders');         // заказы { total, status, createdAt }
+
+    // Состояние кассы
+    let currentOrder = [];       // массив { id, name, price, quantity? упростим: каждый раз добавляем позицию, но для удобства будем хранить просто объекты с дублями
+    let productsCatalog = [];    // { id, name, price }
+
+    // DOM элементы
+    const catalogDiv = document.getElementById('catalogList');
+    const orderItemsDiv = document.getElementById('orderItemsList');
+    const totalSpan = document.getElementById('totalAmountRub');
+    const proceedBtn = document.getElementById('proceedToPayBtn');
+    const clearOrderBtn = document.getElementById('clearOrderBtn');
+    const addProductBtn = document.getElementById('addProductBtn');
+    const newProductName = document.getElementById('newProductName');
+    const newProductPrice = document.getElementById('newProductPrice');
+    const modal = document.getElementById('paymentModal');
+    const modalAmountSpan = document.getElementById('modalAmount');
+    const orderIdDisplaySpan = document.getElementById('orderIdDisplay');
+    const successToast = document.getElementById('successToast');
+
+    let currentOrderId = null;   // id заказа, который ожидает оплаты
+    let paymentWatcherRef = null; // слушатель статуса заказа
+
+    // Вспомогательные функции
+    function updateTotal() {
+        let sum = currentOrder.reduce((acc, item) => acc + item.price, 0);
+        totalSpan.innerText = sum + ' ₽';
+        return sum;
+    }
+
+    function renderCurrentOrder() {
+        if (!currentOrder.length) {
+            orderItemsDiv.innerHTML = '<div style="text-align:center; color:#94a3b8;">Корзина пуста</div>';
+            updateTotal();
+            return;
+        }
+        let html = '';
+        currentOrder.forEach((item, idx) => {
+            html += `
+                <div class="order-row">
+                    <span>${escapeHtml(item.name)}</span>
+                    <span>${item.price} ₽</span>
+                    <button style="background:#fee2e2; border:none; border-radius:30px; padding:4px 12px; cursor:pointer;" onclick="removeFromOrder(${idx})">✕</button>
+                </div>
+            `;
+        });
+        orderItemsDiv.innerHTML = html;
+        updateTotal();
+    }
+
+    window.removeFromOrder = function(index) {
+        currentOrder.splice(index, 1);
+        renderCurrentOrder();
+    };
+
+    function clearOrder() {
+        currentOrder = [];
+        renderCurrentOrder();
+        if (paymentWatcherRef) {
+            paymentWatcherRef.off(); // отключаем старый слушатель если был
+            paymentWatcherRef = null;
+        }
+        currentOrderId = null;
+    }
+
+    // Добавление товара из каталога в заказ
+    function addToOrder(product) {
+        currentOrder.push({
+            name: product.name,
+            price: product.price,
+            productId: product.id
+        });
+        renderCurrentOrder();
+    }
+
+    // Загрузка товаров из Firebase и отрисовка каталога
+    function loadProducts() {
+        productsRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            productsCatalog = [];
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    let product = data[key];
+                    productsCatalog.push({
+                        id: key,
+                        name: product.name,
+                        price: product.price
+                    });
+                });
+            }
+            renderCatalog();
+        });
+    }
+
+    function renderCatalog() {
+        if (!productsCatalog.length) {
+            catalogDiv.innerHTML = '<div style="color:gray;">Нет товаров, добавьте через форму выше</div>';
+            return;
+        }
+        let html = '';
+        productsCatalog.forEach(prod => {
+            html += `
+                <div class="catalog-item" onclick="addToOrder({name:'${escapeHtml(prod.name)}', price:${prod.price}, id:'${prod.id}'})">
+                    <span class="item-name">${escapeHtml(prod.name)}</span>
+                    <span class="item-price">${prod.price} ₽</span>
+                    <span class="add-badge">+</span>
+                </div>
+            `;
+        });
+        catalogDiv.innerHTML = html;
+    }
+
+    // Добавление нового товара в Firebase
+    function addNewProduct() {
+        let name = newProductName.value.trim();
+        let price = parseInt(newProductPrice.value);
+        if (!name || isNaN(price) || price < 0) {
+            alert("Введите корректное название и цену");
+            return;
+        }
+        const newProductRef = productsRef.push();
+        newProductRef.set({
+            name: name,
+            price: price,
+            createdAt: Date.now()
+        }).then(() => {
+            newProductName.value = '';
+            newProductPrice.value = '';
+        }).catch(err => alert("Ошибка добавления: " + err.message));
+    }
+
+    // Создание заказа в Firebase и показ QR-модалки
+    async function createOrderAndShowQR() {
+        if (currentOrder.length === 0) {
+            alert("Добавьте товары в заказ!");
+            return;
+        }
+        const totalSum = currentOrder.reduce((s, i) => s + i.price, 0);
+        // Создаём объект заказа с начальным статусом "waiting"
+        const newOrderRef = ordersRef.push();
+        const orderId = newOrderRef.key;
+        const orderData = {
+            total: totalSum,
+            status: 'waiting',     // waiting, paid
+            createdAt: Date.now(),
+            items: currentOrder.map(i => ({ name: i.name, price: i.price }))
+        };
+        await newOrderRef.set(orderData);
+        
+        // Сохраняем id заказа для отслеживания
+        currentOrderId = orderId;
+        
+        // Формируем URL для QR: igrush-bank.vercel.app/pay/orderId
+        const paymentUrl = `https://igrush-bank.vercel.app/pay/${orderId}`;
+        // Для локального тестирования можно подменить, но в продакшене будет корректный домен
+        // Однако для разработки на localhost используем текущий хост + pay.html?order=...
+        // Но по условию QR должен вести на igrush-bank.vercel.app/pay/(номер заказа)
+        // В реальном деплое всё будет корректно, а для локального теста выведем alert
+        const finalUrl = `https://igrush-bank.vercel.app/pay/${orderId}`;
+        
+        // Показываем модальное окно с QR
+        modalAmountSpan.innerText = totalSum + ' ₽';
+        orderIdDisplaySpan.innerText = `Заказ №: ${orderId}`;
+        
+        // Очищаем предыдущий QR-код, если был
+        const qrContainer = document.getElementById('qrCodeContainer');
+        qrContainer.innerHTML = "";
+        // Генерируем QR код
+        new QRCode(qrContainer, {
+            text: finalUrl,
+            width: 180,
+            height: 180,
+            colorDark: "#1e3c72",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+        
+        modal.style.display = "flex";
+        
+        // Начинаем слушать изменения статуса этого заказа в Firebase
+        if (paymentWatcherRef) paymentWatcherRef.off();
+        const orderStatusRef = database.ref(`orders/${orderId}/status`);
+        paymentWatcherRef = orderStatusRef;
+        orderStatusRef.on('value', (snap) => {
+            const status = snap.val();
+            if (status === 'paid') {
+                // Оплата прошла успешно!
+                showSuccessAndCloseModal();
+                // Очищаем корзину после успешной оплаты
+                clearOrder();
+                if (paymentWatcherRef) {
+                    paymentWatcherRef.off();
+                    paymentWatcherRef = null;
+                }
+                modal.style.display = "none";
+            }
+        });
+    }
+    
+    function showSuccessAndCloseModal() {
+        successToast.style.display = "block";
+        setTimeout(() => {
+            successToast.style.display = "none";
+        }, 3000);
+        // Дополнительно можно обновить что-то
+    }
+    
+    function closePaymentModal() {
+        modal.style.display = "none";
+        if (paymentWatcherRef) {
+            paymentWatcherRef.off();
+            paymentWatcherRef = null;
+        }
+        // Но заказ остаётся в состоянии waiting, можно оставить как есть
+    }
+    
+    // Инициализация событий
+    proceedBtn.addEventListener('click', createOrderAndShowQR);
+    clearOrderBtn.addEventListener('click', clearOrder);
+    addProductBtn.addEventListener('click', addNewProduct);
+    
+    // загружаем товары
+    loadProducts();
+    renderCurrentOrder();
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // Чтобы QR код корректно отображал итоговую страницу оплаты, дополнительно в модалке есть сумма
+    window.closePaymentModal = closePaymentModal;
+</script>
+</body>
+</html>
